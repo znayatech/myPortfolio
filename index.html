@@ -32,10 +32,11 @@
 		  <h1>Shamsuddeen <span>Yusuf</span></h1>
 		  <h3>I'm a Web Developer.</h3>
 		  <div class="newslatter">
-		     <form method="post" action="" onsubmit="return chechForm()">
-			   <input type="text" name="email" id="mail" onchange="checkEmail()" placeholder="Enter Your Email Here">
+		     <form method="post" action="" onsubmit="return chechForm()" name="submit-to-google-sheet">
+			   <input type="text" name="Email" id="mail" onchange="checkEmail()" placeholder="Enter Your Email Here">
 			   <input type="submit" name="submit" value="Let's start">
 			 </form>
+			  <span id="msg"></span>
 		  </div>
 		</div>
 	 </div>
@@ -124,5 +125,67 @@
 	   </div>
 	   <p class="end">Copyright By &#169; Shamsuddeen Yusuf</p>
 	 </footer>
+	   <script>
+	   var sheetName = 'Sheet1'
+var scriptProp = PropertiesService.getScriptProperties()
+
+function intialSetup () {
+  var activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet()
+  scriptProp.setProperty('key', activeSpreadsheet.getId())
+}
+
+function doPost (e) {
+  var lock = LockService.getScriptLock()
+  lock.tryLock(10000)
+
+  try {
+    var doc = SpreadsheetApp.openById(scriptProp.getProperty('key'))
+    var sheet = doc.getSheetByName(sheetName)
+
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+    var nextRow = sheet.getLastRow() + 1
+
+    var newRow = headers.map(function(header) {
+      return header === 'timestamp' ? new Date() : e.parameter[header]
+    })
+
+    sheet.getRange(nextRow, 1, 1, newRow.length).setValues([newRow])
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ 'result': 'success', 'row': nextRow }))
+      .setMimeType(ContentService.MimeType.JSON)
+  }
+
+  catch (e) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ 'result': 'error', 'error': e }))
+      .setMimeType(ContentService.MimeType.JSON)
+  }
+
+  finally {
+    lock.releaseLock()
+  }
+}
+	   
+	   
+	   </script>
+	<script>
+  const scriptURL = 'https://script.google.com/macros/s/AKfycbx2JbsF58wyJrHvsx16LT_DzJJdRzMlVlGvojiSrow3NbCEAKaeswUGU8wha0k32JdN/exec'
+  const form = document.forms['submit-to-google-sheet']
+
+  const msg = document.getElementById("msg")
+  form.addEventListener('submit', e => {
+    e.preventDefault()
+    fetch(scriptURL, { method: 'POST', body: new FormData(form)})
+      .then(response => {
+	     msg.innerHTML = "Email sent successfully"
+		 setTimeout(function(){
+		     msg.innerHTML = ""
+		 },5000)
+		 form.reset()
+	  })
+      .catch(error => console.error('Error!', error.message))
+  })
+</script>
    </body>
 </html>
